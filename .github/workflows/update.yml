@@ -1,0 +1,27 @@
+name: update
+# Follows cauthy-cli's releases: when a newer one is out, the formula is
+# regenerated from its checksums and committed.
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  formula:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: latest release
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "version=$(gh release view -R vennet-developers/cauthy-cli --json tagName --jq .tagName | sed 's/^v//')" >> "$GITHUB_OUTPUT"
+      - run: sh scripts/formula.sh "${{ steps.latest.outputs.version }}"
+      - name: commit
+        run: |
+          git diff --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "cauthy ${{ steps.latest.outputs.version }}"
+          git push
